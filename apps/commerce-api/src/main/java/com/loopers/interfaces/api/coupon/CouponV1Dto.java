@@ -1,11 +1,20 @@
 package com.loopers.interfaces.api.coupon;
 
+import com.loopers.application.coupon.CouponIssueResultInfo;
 import com.loopers.application.coupon.UserCouponInfo;
 
 import java.time.ZonedDateTime;
 import java.util.List;
 
 public class CouponV1Dto {
+
+    public record IssueAsyncResponse(String requestId) {}
+
+    public record IssueResultResponse(String requestId, String status) {
+        public static IssueResultResponse from(CouponIssueResultInfo info) {
+            return new IssueResultResponse(info.requestId(), info.status().name());
+        }
+    }
 
     public record UserCouponResponse(
             Long id,

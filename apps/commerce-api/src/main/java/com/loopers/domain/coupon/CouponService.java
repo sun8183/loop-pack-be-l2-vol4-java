@@ -24,11 +24,12 @@ public class CouponService {
     }
 
     @Transactional
-    public CouponModel create(String name, CouponType type, Long value, Long minOrderAmount, ZonedDateTime expiredAt) {
+    public CouponModel create(String name, CouponType type, Long value, Long minOrderAmount, ZonedDateTime expiredAt, Long stock) {
         return couponRepository.save(new CouponModel(
                 name,
                 new CouponDiscount(type, value, minOrderAmount),
-                new CouponExpiry(expiredAt)
+                new CouponExpiry(expiredAt),
+                stock
         ));
     }
 
