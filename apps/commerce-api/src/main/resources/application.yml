@@ -1,4 +1,5 @@
 server:
+  port: 8080
   shutdown: graceful
   tomcat:
     threads:
@@ -21,8 +22,22 @@ spring:
     import:
       - jpa.yml
       - redis.yml
+      - kafka.yml
       - logging.yml
       - monitoring.yml
+
+order:
+  placed:
+    topic-name: order.placed.topic-v1
+
+coupon:
+  issue:
+    topic-name: coupon.issue.topic-v1
+
+outbox:
+  relay:
+    fixed-delay-ms: 3000
+    batch-size: 100
 
 springdoc:
   use-fqn: true

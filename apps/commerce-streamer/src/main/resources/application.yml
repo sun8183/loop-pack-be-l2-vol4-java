@@ -1,4 +1,5 @@
 server:
+  port: 8099
   shutdown: graceful
   tomcat:
     threads:
@@ -14,7 +15,7 @@ spring:
   main:
     web-application-type: servlet
   application:
-    name: commerce-api
+    name: commerce-streamer
   profiles:
     active: local
   config:
@@ -25,9 +26,21 @@ spring:
       - logging.yml
       - monitoring.yml
 
+management:
+  server:
+    port: 8082 # commerce-api(8081)와 겹치지 않도록 분리
+
 demo-kafka:
   test:
     topic-name: demo.internal.topic-v1
+
+order:
+  placed:
+    topic-name: order.placed.topic-v1
+
+coupon:
+  issue:
+    topic-name: coupon.issue.topic-v1
 
 ---
 spring:
