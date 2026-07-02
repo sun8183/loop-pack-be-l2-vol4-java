@@ -12,8 +12,8 @@ spring:
     properties:
       hibernate:
         default_batch_fetch_size: 100
-        timezone.default_storage: NORMALIZE_UTC
-        jdbc.time_zone: UTC
+        timezone.default_storage: NORMALIZE
+        jdbc.time_zone: Asia/Seoul
 
 datasource:
   mysql-jpa:
