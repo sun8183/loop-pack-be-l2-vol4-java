@@ -64,7 +64,7 @@ public class CouponFacade {
         }
         return couponIssueResultRepository.findByRequestId(requestId)
                 .map(CouponIssueResultInfo::from)
-                .orElse(CouponIssueResultInfo.pending(requestId));
+                .orElse(CouponIssueResultInfo.notFound(requestId));
     }
 
     public Page<CouponInfo> getList(Pageable pageable) {
