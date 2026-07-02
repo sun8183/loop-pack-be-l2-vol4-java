@@ -5,12 +5,14 @@ import com.loopers.domain.order.OrderItemInput;
 import com.loopers.domain.order.OrderLine;
 import com.loopers.domain.order.OrderModel;
 import com.loopers.domain.order.OrderService;
+import com.loopers.domain.order.event.OrderPlacedEvent;
 import com.loopers.domain.order.vo.Money;
 import com.loopers.domain.product.ProductStockModel;
 import com.loopers.domain.product.ProductStockService;
 import com.loopers.support.error.CoreException;
 import com.loopers.support.error.ErrorType;
 import lombok.RequiredArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -33,6 +35,7 @@ public class OrderFacade {
     private final OrderService orderService;
     private final ProductStockService productStockService;
     private final UserCouponService userCouponService;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Transactional
     public OrderInfo createOrder(String orderNumber, Long userId, List<OrderItemInput> items, Long userCouponId) {
@@ -45,8 +48,10 @@ public class OrderFacade {
         long originalTotal = lines.stream().mapToLong(OrderLine::amount).sum();
         UserCouponService.UseResult amounts = userCouponService.use(userCouponId, userId, originalTotal);
         try {
-            return OrderInfo.from(orderService.placeOrder(new OrderModel(orderNumber, userId, userCouponId), lines,
+            OrderInfo info = OrderInfo.from(orderService.placeOrder(new OrderModel(orderNumber, userId, userCouponId), lines,
                     new Money(amounts.originalAmount()), new Money(amounts.discountAmount())));
+            eventPublisher.publishEvent(new OrderPlacedEvent(info.id(), info.orderNumber(), info.userId(), info.totalAmount()));
+            return info;
         } catch (DataIntegrityViolationException e) {
             throw new CoreException(ErrorType.CONFLICT, "이미 처리된 주문입니다.");
         }
