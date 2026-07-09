@@ -26,6 +26,11 @@ public class CouponIssueProcessor {
     private final RedisTemplate<String, String> masterRedisTemplate;
 
     public void process(CouponIssueMessage message) {
+        if (existsResult(message.requestId())) {
+            log.info("쿠폰 발급 재처리 스킵 - 이미 처리된 요청 [requestId={}]", message.requestId());
+            return;
+        }
+
         try {
             transactionTemplate.executeWithoutResult(status -> {
                 jdbcTemplate.update(
@@ -54,11 +59,24 @@ public class CouponIssueProcessor {
         saveResult(message, "SUCCESS");
     }
 
-    private void saveResult(CouponIssueMessage message, String status) {
-        masterRedisTemplate.opsForValue().set(ISSUE_RESULT_KEY_PREFIX + message.requestId(), status, ISSUE_RESULT_TTL);
-        jdbcTemplate.update(
-                "INSERT INTO coupon_issue_results (request_id, coupon_id, user_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(6), NOW(6))",
-                message.requestId(), message.couponId(), message.userId(), status
+    private boolean existsResult(String requestId) {
+        Integer count = jdbcTemplate.queryForObject(
+                "SELECT COUNT(*) FROM coupon_issue_results WHERE request_id = ?",
+                Integer.class, requestId
         );
+        return count != null && count > 0;
+    }
+
+    private void saveResult(CouponIssueMessage message, String status) {
+        try {
+            jdbcTemplate.update(
+                    "INSERT INTO coupon_issue_results (request_id, coupon_id, user_id, status, created_at, updated_at) VALUES (?, ?, ?, ?, NOW(6), NOW(6))",
+                    message.requestId(), message.couponId(), message.userId(), status
+            );
+        } catch (DataIntegrityViolationException e) {
+            log.info("쿠폰 발급 결과 이미 저장됨 - 재처리 스킵 [requestId={}]", message.requestId());
+            return;
+        }
+        masterRedisTemplate.opsForValue().set(ISSUE_RESULT_KEY_PREFIX + message.requestId(), status, ISSUE_RESULT_TTL);
     }
 }
