@@ -16,7 +16,8 @@ public class CouponAdminV1Dto {
             @NotNull(message = "쿠폰 타입은 필수입니다.") CouponType type,
             @NotNull(message = "쿠폰 할인 값은 필수입니다.") Long value,
             Long minOrderAmount,
-            @NotNull(message = "쿠폰 만료일은 필수입니다.") ZonedDateTime expiredAt
+            @NotNull(message = "쿠폰 만료일은 필수입니다.") ZonedDateTime expiredAt,
+            @NotNull(message = "쿠폰 재고는 필수입니다.") Long stock
     ) {}
 
     public record UpdateRequest(

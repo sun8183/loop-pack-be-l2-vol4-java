@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
 
+
 @RequiredArgsConstructor
 @RestController
 public class CouponV1Controller implements CouponV1ApiSpec {
@@ -27,6 +28,22 @@ public class CouponV1Controller implements CouponV1ApiSpec {
             @RequestAttribute("authenticatedUserId") Long userId
     ) {
         return ApiResponse.success(CouponV1Dto.UserCouponResponse.from(couponFacade.issue(couponId, userId)));
+    }
+
+    @PostMapping("/api/v1/coupons/{couponId}/issue-async")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    @Override
+    public ApiResponse<CouponV1Dto.IssueAsyncResponse> issueAsyncCoupon(
+            @PathVariable Long couponId,
+            @RequestAttribute("authenticatedUserId") Long userId
+    ) {
+        return ApiResponse.success(new CouponV1Dto.IssueAsyncResponse(couponFacade.issueAsync(couponId, userId)));
+    }
+
+    @GetMapping("/api/v1/coupons/issue-result/{requestId}")
+    @Override
+    public ApiResponse<CouponV1Dto.IssueResultResponse> getIssueResult(@PathVariable String requestId) {
+        return ApiResponse.success(CouponV1Dto.IssueResultResponse.from(couponFacade.getIssueResult(requestId)));
     }
 
     @GetMapping("/api/v1/users/me/coupons")

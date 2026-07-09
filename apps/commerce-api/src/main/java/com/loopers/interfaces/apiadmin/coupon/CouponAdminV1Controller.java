@@ -47,7 +47,7 @@ public class CouponAdminV1Controller implements CouponAdminV1ApiSpec {
     ) {
         return ApiResponse.success(
                 CouponAdminV1Dto.CouponResponse.from(
-                        couponFacade.create(request.name(), request.type(), request.value(), request.minOrderAmount(), request.expiredAt())
+                        couponFacade.create(request.name(), request.type(), request.value(), request.minOrderAmount(), request.expiredAt(), request.stock())
                 )
         );
     }

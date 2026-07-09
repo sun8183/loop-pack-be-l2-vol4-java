@@ -29,14 +29,19 @@ public class CouponModel extends BaseEntity {
     @Embedded
     private CouponExpiry expiry;
 
-    public CouponModel(String name, CouponDiscount discount, CouponExpiry expiry) {
+    @Column(nullable = false)
+    private Long stock;
+
+    public CouponModel(String name, CouponDiscount discount, CouponExpiry expiry, Long stock) {
         Guard.notBlank(name, "쿠폰 이름은 비어있을 수 없습니다.");
         Guard.maxLength(name, 100, "쿠폰 이름은 100자 이하여야 합니다.");
         Guard.notNull(discount, "쿠폰 할인 정보는 필수입니다.");
         Guard.notNull(expiry, "쿠폰 만료 정보는 필수입니다.");
+        Guard.notNegative(stock, "재고는 0 이상이어야 합니다.");
         this.name = name;
         this.discount = discount;
         this.expiry = expiry;
+        this.stock = stock;
     }
 
     public boolean isExpired() {
