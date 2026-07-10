@@ -28,17 +28,16 @@ public class QueueFacade {
 
     // KEYS[1]=대기열 ZSET, ARGV[1]=꺼낼 인원수, ARGV[2]=허용TTL(초), ARGV[3]=허용상태값, ARGV[4]=허용키 prefix
     // ZPOPMIN으로 꺼낸 인원 전부에게 허용 키를 세팅하는 것까지 한 번에 원자적으로 처리해, 중간에 죽어도 "꺼냈는데 허용 못 받은" 유령 상태가 안 생기게 한다.
-    private static final RedisScript<Long> ADMIT_SCRIPT = RedisScript.of(
-            "local popped = redis.call('ZPOPMIN', KEYS[1], ARGV[1]) "
-                    + "local count = 0 "
-                    + "for i = 1, #popped, 2 do "
-                    + "local token = popped[i] "
-                    + "redis.call('SET', ARGV[4] .. token, ARGV[3], 'EX', ARGV[2]) "
-                    + "count = count + 1 "
-                    + "end "
-                    + "return count",
-            Long.class
-    );
+    private static final RedisScript<Long> ADMIT_SCRIPT = RedisScript.of("""
+            local popped = redis.call('ZPOPMIN', KEYS[1], ARGV[1])
+            local count = 0
+            for i = 1, #popped, 2 do
+                local token = popped[i]
+                redis.call('SET', ARGV[4] .. token, ARGV[3], 'EX', ARGV[2])
+                count = count + 1
+            end
+            return count
+            """, Long.class);
 
     @Qualifier(RedisConfig.REDIS_TEMPLATE_MASTER)
     private final RedisTemplate<String, String> masterRedisTemplate;

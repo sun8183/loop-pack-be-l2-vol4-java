@@ -2,6 +2,7 @@ package com.loopers.interfaces.api.order;
 
 import com.loopers.application.order.OrderFacade;
 import com.loopers.application.order.OrderInfo;
+import com.loopers.application.order.OrderRateLimiter;
 import com.loopers.application.queue.QueueFacade;
 import com.loopers.interfaces.api.ApiResponse;
 import jakarta.validation.Valid;
@@ -29,6 +30,7 @@ public class OrderV1Controller implements OrderV1ApiSpec {
 
     private final OrderFacade orderFacade;
     private final QueueFacade queueFacade;
+    private final OrderRateLimiter orderRateLimiter;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
@@ -39,6 +41,7 @@ public class OrderV1Controller implements OrderV1ApiSpec {
             @RequestHeader("X-Loopers-QueueToken") String queueToken
     ) {
         queueFacade.verify(queueToken, userId);
+        orderRateLimiter.checkLimit();
         OrderInfo order = orderFacade.createOrder(request.orderNumber(), userId, request.toInputs(), request.userCouponId());
         queueFacade.consume(queueToken);
         return ApiResponse.success(OrderV1Dto.OrderResponse.from(order));
