@@ -10,8 +10,8 @@ import java.util.List;
 @Tag(name = "Order V1 API", description = "주문 API")
 public interface OrderV1ApiSpec {
 
-    @Operation(summary = "주문 요청", description = "상품을 주문합니다.")
-    ApiResponse<OrderV1Dto.OrderResponse> createOrder(OrderV1Dto.OrderRequest request, Long userId);
+    @Operation(summary = "주문 요청", description = "상품을 주문합니다. 대기열 입장 토큰 검증을 통과해야 합니다.")
+    ApiResponse<OrderV1Dto.OrderResponse> createOrder(OrderV1Dto.OrderRequest request, Long userId, String queueToken);
 
     @Operation(summary = "주문 목록 조회", description = "유저의 주문 목록을 날짜 범위로 조회합니다.")
     ApiResponse<List<OrderV1Dto.OrderResponse>> getOrders(Long userId, LocalDate startAt, LocalDate endAt);
