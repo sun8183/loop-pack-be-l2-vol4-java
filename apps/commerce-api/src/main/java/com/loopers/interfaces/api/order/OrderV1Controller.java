@@ -1,6 +1,9 @@
 package com.loopers.interfaces.api.order;
 
 import com.loopers.application.order.OrderFacade;
+import com.loopers.application.order.OrderInfo;
+import com.loopers.application.order.OrderRateLimiter;
+import com.loopers.application.queue.QueueFacade;
 import com.loopers.interfaces.api.ApiResponse;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -11,6 +14,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestAttribute;
 import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -25,15 +29,22 @@ import java.util.List;
 public class OrderV1Controller implements OrderV1ApiSpec {
 
     private final OrderFacade orderFacade;
+    private final QueueFacade queueFacade;
+    private final OrderRateLimiter orderRateLimiter;
 
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     @Override
     public ApiResponse<OrderV1Dto.OrderResponse> createOrder(
             @Valid @RequestBody OrderV1Dto.OrderRequest request,
-            @RequestAttribute("authenticatedUserId") Long userId
+            @RequestAttribute("authenticatedUserId") Long userId,
+            @RequestHeader("X-Loopers-QueueToken") String queueToken
     ) {
-        return ApiResponse.success(OrderV1Dto.OrderResponse.from(orderFacade.createOrder(request.orderNumber(), userId, request.toInputs(), request.userCouponId())));
+        queueFacade.verify(queueToken, userId);
+        orderRateLimiter.checkLimit();
+        OrderInfo order = orderFacade.createOrder(request.orderNumber(), userId, request.toInputs(), request.userCouponId());
+        queueFacade.consume(queueToken);
+        return ApiResponse.success(OrderV1Dto.OrderResponse.from(order));
     }
 
     @GetMapping

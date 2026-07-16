@@ -25,10 +25,17 @@ spring:
       - kafka.yml
       - logging.yml
       - monitoring.yml
+  task:
+    scheduling:
+      pool:
+        size: 2 # 기본값 1이면 QueueAdmissionScheduler(1s)와 OutboxEventRelay(3s)가 스레드 하나를 공유해 서로 지연시킴
 
 order:
   placed:
     topic-name: order.placed.topic-v1
+  rate-limit:
+    capacity: 50 # 부하테스트로 확인한 안전 처리량(초당 50건)을 그대로 사용
+    refill-per-sec: 50
 
 coupon:
   issue:
@@ -38,6 +45,11 @@ outbox:
   relay:
     fixed-delay-ms: 3000
     batch-size: 100
+
+queue:
+  admission:
+    fixed-delay-ms: 1000
+    batch-size: 40
 
 springdoc:
   use-fqn: true
