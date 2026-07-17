@@ -33,6 +33,7 @@ public class RedisConfig{
     public static final String REDIS_TEMPLATE_MASTER = "redisTemplateMaster";
     public static final String PRODUCT_LIST_LATEST_PRICE_CACHE = "productListLatestPrice";
     public static final String PRODUCT_LIST_LIKES_CACHE = "productListLikes";
+    public static final String RANKING_HISTORY_CACHE = "rankingHistory";
 
     private final RedisProperties redisProperties;
 
@@ -92,6 +93,7 @@ public class RedisConfig{
         Map<String, RedisCacheConfiguration> namedCacheConfigs = new HashMap<>();
         namedCacheConfigs.put(PRODUCT_LIST_LATEST_PRICE_CACHE, defaultConfig.entryTtl(Duration.ofHours(1)));
         namedCacheConfigs.put(PRODUCT_LIST_LIKES_CACHE, defaultConfig.entryTtl(Duration.ofMinutes(10)));
+        namedCacheConfigs.put(RANKING_HISTORY_CACHE, defaultConfig.entryTtl(Duration.ofHours(1)));
 
         return RedisCacheManager.builder(redisConnectionFactory)
                 .cacheDefaults(defaultConfig)
