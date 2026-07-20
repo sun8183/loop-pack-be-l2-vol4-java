@@ -2,6 +2,7 @@ package com.loopers.interfaces.api.product;
 
 import com.loopers.application.product.ProductFacade;
 import com.loopers.application.product.ProductPageResult;
+import com.loopers.application.ranking.RankingFacade;
 import com.loopers.domain.product.enums.ProductSortType;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.api.PageResponse;
@@ -21,6 +22,7 @@ import org.springframework.web.bind.annotation.RestController;
 public class ProductV1Controller implements ProductV1ApiSpec {
 
     private final ProductFacade productFacade;
+    private final RankingFacade rankingFacade;
 
     @GetMapping
     @Override
@@ -38,7 +40,8 @@ public class ProductV1Controller implements ProductV1ApiSpec {
     @Override
     public ApiResponse<ProductV1Dto.ProductDetailResponse> getProduct(@PathVariable Long productId) {
         return ApiResponse.success(ProductV1Dto.ProductDetailResponse.from(
-                productFacade.getProduct(productId)
+                productFacade.getProduct(productId),
+                rankingFacade.getProductRank(productId).orElse(null)
         ));
     }
 }

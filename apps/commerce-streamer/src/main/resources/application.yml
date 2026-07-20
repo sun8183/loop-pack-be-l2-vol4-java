@@ -42,6 +42,17 @@ coupon:
   issue:
     topic-name: coupon.issue.topic-v1
 
+product:
+  liked:
+    topic-name: product.liked.topic-v1
+  unliked:
+    topic-name: product.unliked.topic-v1
+
+ranking:
+  weight:
+    order: 0.8
+    like: 0.2
+
 ---
 spring:
   config:

@@ -28,7 +28,7 @@ spring:
   task:
     scheduling:
       pool:
-        size: 2 # 기본값 1이면 QueueAdmissionScheduler(1s)와 OutboxEventRelay(3s)가 스레드 하나를 공유해 서로 지연시킴
+        size: 3 # QueueAdmissionScheduler(1s), OutboxEventRelay(3s), 일별 랭킹 배치(1일 1회)가 스레드 부족으로 서로 지연시키지 않도록
 
 order:
   placed:
@@ -41,6 +41,12 @@ coupon:
   issue:
     topic-name: coupon.issue.topic-v1
 
+product:
+  liked:
+    topic-name: product.liked.topic-v1
+  unliked:
+    topic-name: product.unliked.topic-v1
+
 outbox:
   relay:
     fixed-delay-ms: 3000
@@ -50,6 +56,14 @@ queue:
   admission:
     fixed-delay-ms: 1000
     batch-size: 40
+
+ranking:
+  # commerce-streamer의 ranking.weight와 반드시 같은 값 유지 (DailyRankingBatchScheduler가 동일 산식으로 재계산함)
+  weight:
+    order: 0.8
+    like: 0.2
+  daily-batch:
+    cron: "0 10 0 * * *"
 
 springdoc:
   use-fqn: true

@@ -35,13 +35,15 @@ public class ProductV1Dto {
             String brandName,
             Long minPrice,
             long likeCount,
-            List<StockResponse> stocks
+            List<StockResponse> stocks,
+            RankInfo rankInfo
     ) {
-        public static ProductDetailResponse from(ProductInfo info) {
+        public static ProductDetailResponse from(ProductInfo info, Long rank) {
             return new ProductDetailResponse(
                     info.id(), info.name(), info.status(),
                     info.brandId(), info.brandName(), info.minPrice(), info.likeCount(),
-                    info.stocks().stream().map(StockResponse::from).toList()
+                    info.stocks().stream().map(StockResponse::from).toList(),
+                    rank == null ? null : new RankInfo(rank.intValue())
             );
         }
     }
@@ -50,5 +52,8 @@ public class ProductV1Dto {
         public static StockResponse from(ProductInfo.StockInfo stock) {
             return new StockResponse(stock.id(), stock.price(), stock.quantity());
         }
+    }
+
+    public record RankInfo(Integer rank) {
     }
 }
