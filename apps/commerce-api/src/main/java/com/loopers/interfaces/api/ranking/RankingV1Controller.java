@@ -2,6 +2,7 @@ package com.loopers.interfaces.api.ranking;
 
 import com.loopers.application.ranking.RankingFacade;
 import com.loopers.application.ranking.RankingPageResult;
+import com.loopers.domain.ranking.RankingPeriod;
 import com.loopers.interfaces.api.ApiResponse;
 import com.loopers.interfaces.api.PageResponse;
 import lombok.RequiredArgsConstructor;
@@ -25,9 +26,10 @@ public class RankingV1Controller implements RankingV1ApiSpec {
     @Override
     public ApiResponse<PageResponse<RankingV1Dto.RankingResponse>> getRankings(
             @RequestParam @DateTimeFormat(pattern = "yyyyMMdd") LocalDate date,
+            @RequestParam(defaultValue = "DAILY") RankingPeriod period,
             @PageableDefault(size = 20) Pageable pageable
     ) {
-        RankingPageResult result = rankingFacade.getRankings(date, pageable);
+        RankingPageResult result = rankingFacade.getRankings(date, period, pageable);
         return ApiResponse.success(PageResponse.from(
                 result.content().stream().map(RankingV1Dto.RankingResponse::from).toList(),
                 pageable, result.totalElements()
