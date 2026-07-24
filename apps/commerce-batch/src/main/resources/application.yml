@@ -22,6 +22,12 @@ management:
     defaults:
       enabled: false
 
+ranking:
+  # commerce-api/commerce-streamer의 ranking.weight와 반드시 같은 값 유지
+  weight:
+    order: 0.8
+    like: 0.2
+
 ---
 spring:
   config:
