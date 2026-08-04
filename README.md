@@ -98,6 +98,23 @@ Redis를 master(쓰기)/readonly(읽기)로 분리하고, 상품 조회 등 읽�
 ### 5. 결제 연동
 PG 시뮬레이터와 연동하며 Resilience4j로 재시도/타임아웃을 제어해 외부 시스템 장애에 대비했습니다.
 
+**서킷 브레이커: 결제 요청 vs 결제 조회 분리 설정**
+
+결제 요청(`paymentGateway`)과 결제 상태 조회(`paymentGatewayQuery`)는 장애 시 리스크가 달라 서킷 브레이커 인스턴스를 분리했습니다. 요청은 중복 승인 위험이 있어 재시도를 걸지 않고, 조회는 멱등하므로 재시도를 추가했습니다.
+
+| 설정 | `paymentGateway` (요청) | `paymentGatewayQuery` (조회) |
+|------|------|------|
+| failure-rate-threshold | 50% | 50% |
+| minimum-number-of-calls | 5 | 6 |
+| wait-duration-in-open-state | 30s | 10s |
+| permitted-calls-in-half-open | 3 | 2 |
+| sliding-window | COUNT_BASED, 10 | COUNT_BASED, 15 |
+| Retry | 없음 | max-attempts 3, wait 500ms, `ResourceAccessException`에만 |
+
+- 두 인스턴스 모두 `HttpClientErrorException`(4xx), `CoreException`(도메인 예외)은 서킷 카운트에서 제외 — 클라이언트 잘못까지 서킷을 열리게 하지 않기 위함
+- 조회는 `wait-duration-in-open-state`를 짧게(10s) 잡아 반정상 상태로 빨리 복귀 시도 — 조회 재시도는 상태를 바꾸지 않아 부담이 적음
+- 설정 위치: `apps/commerce-api/src/main/resources/application.yml`, 적용부: `RestTemplatePaymentGatewayClient`
+
 ## 로컬 환경 실행
 
 ### 인프라 (MySQL, Redis, Kafka)
