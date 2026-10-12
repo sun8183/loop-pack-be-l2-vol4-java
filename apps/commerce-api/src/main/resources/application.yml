@@ -28,7 +28,7 @@ spring:
   task:
     scheduling:
       pool:
-        size: 3 # QueueAdmissionScheduler(1s), OutboxEventRelay(3s), 일별 랭킹 배치(1일 1회)가 스레드 부족으로 서로 지연시키지 않도록
+        size: 4 # QueueAdmissionScheduler(1s), OutboxEventRelay(3s), PaymentReconcileScheduler(30s), 일별 랭킹 배치(1일 1회)가 스레드 부족으로 서로 지연시키지 않도록
 
 order:
   placed:
@@ -76,6 +76,12 @@ pg:
   connect-timeout-ms: 3000
   request-read-timeout-ms: 5000
   query-read-timeout-ms: 3000
+
+payment:
+  reconcile:
+    fixed-delay-ms: 30000
+    grace-seconds: 60 # PG가 요청을 저장하기 전 조회해 미접수(404)로 오판하지 않도록, 생성 후 이 시간이 지난 결제만 대사
+    batch-size: 50
 
 resilience4j:
   retry:
