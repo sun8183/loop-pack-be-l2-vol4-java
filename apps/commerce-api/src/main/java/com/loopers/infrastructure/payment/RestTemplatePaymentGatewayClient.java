@@ -11,8 +11,11 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
+import org.springframework.web.client.HttpClientErrorException;
+import org.springframework.web.client.ResourceAccessException;
 import org.springframework.web.client.RestTemplate;
 
+import java.util.List;
 import java.util.Map;
 
 @Component
@@ -51,11 +54,17 @@ public class RestTemplatePaymentGatewayClient implements PaymentGatewayClient {
                 "callbackUrl", properties.callbackUrl()
         );
 
-        PgTransactionResponse response = requestTemplate.postForObject(
-                properties.url() + "/api/v1/payments",
-                new HttpEntity<>(body, headers),
-                PgTransactionResponse.class
-        );
+        PgTransactionResponse response;
+        try {
+            response = requestTemplate.postForObject(
+                    properties.url() + "/api/v1/payments",
+                    new HttpEntity<>(body, headers),
+                    PgTransactionResponse.class
+            );
+        } catch (ResourceAccessException e) {
+            // connect 실패와 read timeout을 구분하지 않고 결과 불명으로 본다: 실제 미접수여도 대사 시 404로 실패 확정됨
+            throw new PaymentGatewayClient.UnknownResultException(e);
+        }
         if (response == null || response.data() == null) {
             throw new CoreException(ErrorType.INTERNAL_ERROR, "PG 응답이 올바르지 않습니다.");
         }
@@ -81,6 +90,33 @@ public class RestTemplatePaymentGatewayClient implements PaymentGatewayClient {
         return new QueryResult(PgTransactionStatus.valueOf(response.data().status()));
     }
 
+    @Retry(name = "paymentGatewayQuery")
+    @CircuitBreaker(name = "paymentGatewayQuery")
+    @Override
+    public List<Transaction> findByOrderNumber(String orderNumber, Long userId) {
+        HttpHeaders headers = new HttpHeaders();
+        headers.set("X-USER-ID", String.valueOf(userId));
+
+        PgOrderResponse response;
+        try {
+            response = queryTemplate.exchange(
+                    properties.url() + "/api/v1/payments?orderId={orderId}",
+                    org.springframework.http.HttpMethod.GET,
+                    new HttpEntity<>(headers),
+                    PgOrderResponse.class,
+                    orderNumber
+            ).getBody();
+        } catch (HttpClientErrorException.NotFound e) {
+            return List.of();
+        }
+        if (response == null || response.data() == null) {
+            throw new CoreException(ErrorType.INTERNAL_ERROR, "PG 응답이 올바르지 않습니다.");
+        }
+        return response.data().transactions().stream()
+                .map(t -> new Transaction(t.transactionKey(), PgTransactionStatus.valueOf(t.status())))
+                .toList();
+    }
+
     private record PgTransactionResponse(boolean success, PgTransactionData data) {}
 
     private record PgTransactionData(String transactionKey, String status, String reason) {}
@@ -88,4 +124,8 @@ public class RestTemplatePaymentGatewayClient implements PaymentGatewayClient {
     private record PgQueryResponse(boolean success, PgQueryData data) {}
 
     private record PgQueryData(String transactionKey, String status, String reason) {}
+
+    private record PgOrderResponse(boolean success, PgOrderData data) {}
+
+    private record PgOrderData(String orderId, List<PgQueryData> transactions) {}
 }

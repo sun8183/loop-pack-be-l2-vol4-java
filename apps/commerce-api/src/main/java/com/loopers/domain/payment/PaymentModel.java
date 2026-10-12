@@ -89,8 +89,12 @@ public class PaymentModel extends BaseEntity {
         this.status = PaymentStatus.EXPIRED;
     }
 
+    public boolean isActive() {
+        return this.status == PaymentStatus.REQUEST || this.status == PaymentStatus.PENDING;
+    }
+
     private void validateActive() {
-        if (this.status != PaymentStatus.REQUEST && this.status != PaymentStatus.PENDING) {
+        if (!isActive()) {
             throw new CoreException(ErrorType.BAD_REQUEST,
                     "결제 요청 또는 진행중 상태에서만 상태를 변경할 수 있습니다. 현재 상태: " + this.status.getDescription());
         }

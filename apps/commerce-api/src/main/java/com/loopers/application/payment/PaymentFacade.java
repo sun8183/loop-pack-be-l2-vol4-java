@@ -18,7 +18,9 @@ import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionTemplate;
 
+import java.time.Duration;
 import java.time.ZonedDateTime;
+import java.util.List;
 
 @Slf4j
 @RequiredArgsConstructor
@@ -47,6 +49,9 @@ public class PaymentFacade {
             log.warn("PG 서킷 오픈 [paymentId={}]", payment.getId());
             paymentService.fail(payment.getId());
             throw new CoreException(ErrorType.SERVICE_UNAVAILABLE, "PG 일시 점검 중입니다. 잠시 후 다시 시도해주세요.");
+        } catch (PaymentGatewayClient.UnknownResultException e) {
+            // PG가 이미 승인했을 수 있어 실패로 확정하지 않는다. REQUEST로 두고 대사 스케줄러가 주문번호로 확정
+            log.warn("PG 결제 결과 불명, 대사 대기 [paymentId={}]: {}", payment.getId(), e.getMessage());
         } catch (Exception e) {
             log.warn("PG 결제 요청 실패 [paymentId={}]: {}", payment.getId(), e.getMessage());
             paymentService.fail(payment.getId());
@@ -78,6 +83,49 @@ public class PaymentFacade {
             log.warn("PG 상태 조회 실패 [transactionKey={}]: {}", transactionKey, e.getMessage());
             throw new CoreException(ErrorType.INTERNAL_ERROR, "PG 상태 조회에 실패했습니다. 잠시 후 다시 시도해주세요.");
         }
+    }
+
+    /**
+     * 콜백·응답을 받지 못하고 남은 결제를 PG 조회로 확정한다.
+     * grace 이전에 생성된 건만 대상으로 해, PG가 아직 저장하지 않은 요청을 미접수(404)로 오판하지 않게 한다.
+     */
+    public int reconcileStalePayments(Duration grace, int limit) {
+        List<PaymentModel> stalePayments = paymentService.getActiveCreatedBefore(ZonedDateTime.now().minus(grace), limit);
+        int reconciled = 0;
+        for (PaymentModel payment : stalePayments) {
+            try {
+                OrderModel order = orderService.get(payment.getOrderId());
+                PaymentModel result = payment.getStatus() == PaymentStatus.REQUEST
+                        ? reconcileRequested(payment, order)
+                        : reconcilePending(payment, order);
+                if (!result.isActive()) {
+                    reconciled++;
+                }
+            } catch (Exception e) {
+                log.warn("결제 대사 실패 [paymentId={}]: {}", payment.getId(), e.getMessage());
+            }
+        }
+        return reconciled;
+    }
+
+    private PaymentModel reconcileRequested(PaymentModel payment, OrderModel order) {
+        List<PaymentGatewayClient.Transaction> transactions =
+                paymentGatewayClient.findByOrderNumber(order.getOrderNumber(), order.getUserId());
+        return transactionTemplate.execute(status -> completeOrderIfApproved(
+                paymentService.reconcileRequested(payment.getId(), transactions)));
+    }
+
+    private PaymentModel reconcilePending(PaymentModel payment, OrderModel order) {
+        PaymentGatewayClient.QueryResult result = paymentGatewayClient.query(payment.getTransactionKey(), order.getUserId());
+        return transactionTemplate.execute(status -> completeOrderIfApproved(
+                paymentService.applyCallback(payment.getTransactionKey(), result.status())));
+    }
+
+    private PaymentModel completeOrderIfApproved(PaymentModel payment) {
+        if (payment.getStatus() == PaymentStatus.APPROVED) {
+            orderService.complete(payment.getOrderId());
+        }
+        return payment;
     }
 
     @Transactional
