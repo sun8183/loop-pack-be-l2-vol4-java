@@ -1,5 +1,6 @@
 import org.gradle.api.Project.DEFAULT_VERSION
 import org.springframework.boot.gradle.tasks.bundling.BootJar
+import org.springframework.boot.gradle.tasks.run.BootRun
 
 /** --- configuration functions --- */
 fun getGitHash(): String {
@@ -77,6 +78,8 @@ subprojects {
     configure(allprojects.filter { it.parent?.name.equals("apps") }) {
         tasks.withType(Jar::class) { enabled = false }
         tasks.withType(BootJar::class) { enabled = true }
+        // IDE 실행과 동일하게 루트에서 실행해, 상대 경로(logs/ 등)가 실행 방법과 무관하게 같은 위치를 가리키도록 함
+        tasks.withType(BootRun::class) { workingDir = rootProject.projectDir }
     }
 
     tasks.test {
