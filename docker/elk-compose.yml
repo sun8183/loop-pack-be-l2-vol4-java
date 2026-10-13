@@ -1,0 +1,71 @@
+version: '3'
+
+# 서버별 Filebeat 공통 정의. 서버마다 다른 값(hostname, 로그 폴더, registry 볼륨)만 각 서비스에서 지정
+# 주의: volumes 같은 리스트는 병합되지 않고 통째로 덮어써지므로 서비스마다 전부 작성
+x-filebeat: &filebeat
+  image: docker.elastic.co/beats/filebeat:8.17.0
+  # Windows bind mount 는 설정 파일 권한/소유자 검사를 통과하지 못해 비활성화
+  command: ["filebeat", "-e", "--strict.perms=false"]
+  depends_on:
+    - logstash
+
+services:
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.17.0
+    environment:
+      - discovery.type=single-node
+      # 로컬 학습용: 인증/TLS 비활성화 (운영 금지)
+      - xpack.security.enabled=false
+      - ES_JAVA_OPTS=-Xms512m -Xmx512m
+    ports:
+      - "9200:9200"
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.17.0
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+      # 기본 활성화된 X-Pack 모니터링이 ES 인증을 시도하지 않도록 끔
+      - xpack.monitoring.enabled=false
+    volumes:
+      - ./elk/logstash/pipeline:/usr/share/logstash/pipeline:ro
+    # 5044 는 같은 compose 네트워크의 Filebeat 만 접속하므로 호스트에 공개하지 않음
+    depends_on:
+      - elasticsearch
+
+  # 서버 1대에 붙는 수집 에이전트를 흉내냄. hostname 이 이벤트의 host.name 이 됨
+  filebeat-server1:
+    <<: *filebeat
+    hostname: server1
+    volumes:
+      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ../logs/server1:/logs:ro
+      # 어디까지 읽었는지(registry) 보존: 컨테이너 재생성 시 중복 전송 방지
+      - filebeat-server1-data:/usr/share/filebeat/data
+
+  filebeat-server2:
+    <<: *filebeat
+    hostname: server2
+    volumes:
+      - ./elk/filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
+      - ../logs/server2:/logs:ro
+      - filebeat-server2-data:/usr/share/filebeat/data
+
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.17.0
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    ports:
+      - "5601:5601"
+    depends_on:
+      - elasticsearch
+
+volumes:
+  elasticsearch-data:
+  filebeat-server1-data:
+  filebeat-server2-data:
+
+networks:
+  default:
+    driver: bridge

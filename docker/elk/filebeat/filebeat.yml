@@ -1,0 +1,9 @@
+# 서버별 Filebeat 공통 설정. 서버 구분은 compose 의 hostname(host.name) 과 마운트 폴더로 함
+filebeat.inputs:
+  - type: filestream
+    id: app-logs
+    paths:
+      - /logs/*.log
+
+output.logstash:
+  hosts: ["logstash:5044"]

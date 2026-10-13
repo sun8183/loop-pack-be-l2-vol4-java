@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<included>
+    <springProperty name="appName" source="spring.application.name"/>
+    <!-- logging.file.name 으로 덮어쓸 수 있음. 상대 경로는 실행 디렉터리 기준 (bootRun, IDE 모두 프로젝트 루트) -->
+    <property name="LOG_FILE" value="${LOG_FILE:-logs/${appName}.log}"/>
+    <include resource="org/springframework/boot/logging/logback/defaults.xml" />
+    <!-- 콘솔과 같은 포맷(색상 제외) + 날짜/크기 기준 롤링. 롤링된 파일은 .gz 로 끝나 수집 대상(*.log)에서 빠짐 -->
+    <include resource="org/springframework/boot/logging/logback/file-appender.xml" />
+</included>
